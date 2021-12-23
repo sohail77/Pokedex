@@ -6,12 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
@@ -19,41 +15,79 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.paging.CombinedLoadStates
+import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.rememberImagePainter
 import com.sohail.pokedex.data.models.Pokemon
 import com.sohail.pokedex.ui.listScreen.ListViewModel
 import com.sohail.pokedex.ui.theme.PokedexTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    val pokemonViewModel : ListViewModel by viewModels()
+    private val pokemonViewModel : ListViewModel by viewModels()
 
     @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pokemonViewModel.getPokemons()
         setContent {
             PokedexTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(color = MaterialTheme.colors.background) {
-                    PokemonList(pokemonViewModel.pokemonList)
+                    PokemonList(pokemonViewModel.getPokemons())
                 }
             }
         }
     }
 }
 
+private const val CELL_COUNT = 2
+
+@OptIn(ExperimentalFoundationApi::class)
+private val span: (LazyGridItemSpanScope) -> GridItemSpan = { GridItemSpan(CELL_COUNT) }
+
 @ExperimentalFoundationApi
 @Composable
-fun PokemonList(list: List<Pokemon>) {
+fun PokemonList(list: Flow<PagingData<Pokemon>>) {
+    val lazyPokemonItems = list.collectAsLazyPagingItems()
     LazyVerticalGrid(
-        cells = GridCells.Fixed(2),
-        modifier = Modifier.padding(8.dp)) {
-        items(items = list) { pokemon ->
-            PokemonTile(pokemon = pokemon)
+        cells = GridCells.Fixed(CELL_COUNT),
+        modifier = Modifier.padding(8.dp)
+    ) {
+        items(lazyPokemonItems.itemCount) { index ->
+            lazyPokemonItems[index]?.let {
+                PokemonTile(pokemon = it)
+            }
         }
+        renderLoading(lazyPokemonItems.loadState)
+    }
+}
+
+@ExperimentalFoundationApi
+private fun LazyGridScope.renderLoading(loadState: CombinedLoadStates) {
+    when {
+        loadState.refresh is LoadState.Loading -> {
+            item(span = span) { LoadingView(modifier = Modifier.fillMaxHeight()) }
+        }
+        loadState.append is LoadState.Loading -> {
+            item(span = span) { LoadingView(modifier = Modifier.padding(10.dp)) }
+        }
+        else -> return
+    }
+}
+
+@Composable
+fun LoadingView(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator()
     }
 }
 
@@ -88,6 +122,6 @@ fun PokemonTile(modifier: Modifier = Modifier, pokemon: Pokemon) {
 @Composable
 fun DefaultPreview() {
     PokedexTheme {
-        PokemonList(listOf(Pokemon(1, "bulbasaur", ""),Pokemon(2, "bulbasaur", ""),Pokemon(3, "bulbasaur", "")))
+        PokemonList(flowOf(PagingData.from(listOf(Pokemon(1, "bulbasaur", ""),Pokemon(2, "bulbasaur", ""),Pokemon(3, "bulbasaur", "")))))
     }
 }
