@@ -4,5 +4,5 @@ import com.sohail.pokedex.data.models.Pokemon
 
 interface PokemonRepository {
 
-    suspend fun getPokemons(): List<Pokemon>
+    suspend fun getPokemons(offset: Int): List<Pokemon>
 }

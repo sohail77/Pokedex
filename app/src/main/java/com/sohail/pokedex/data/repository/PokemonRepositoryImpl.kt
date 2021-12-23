@@ -9,8 +9,8 @@ class PokemonRepositoryImpl @Inject constructor(
     private val apiService: ApiService
 ) : PokemonRepository {
 
-    override suspend fun getPokemons(): List<Pokemon> {
-        val pokemonData = apiService.getPokemons()
+    override suspend fun getPokemons(offset: Int): List<Pokemon> {
+        val pokemonData = apiService.getPokemons(offset)
         val result = mutableListOf<Pokemon>()
         pokemonData.results.forEach {
             val lastPath = Uri.parse(it.url).lastPathSegment?.toInt()
