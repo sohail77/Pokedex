@@ -10,12 +10,12 @@ class PokemonPagingSource @Inject constructor(
 ) : PagingSource<Int, Pokemon>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Pokemon> {
-        val nextPage = params.key ?: 1
+        val nextPage = params.key ?: 0
         val pokemonResponse = pokemonRepository.getPokemons(nextPage)
 
         return LoadResult.Page(
             data = pokemonResponse,
-            prevKey = if(nextPage == 1) null
+            prevKey = if(nextPage == 0) null
         else nextPage - 20,
             nextKey = nextPage + 20
         )
